@@ -4,52 +4,66 @@ const execa = require('execa');
 const app = express();
 const fs = require('fs');
 
+const execacmd = cmdstr => {
+  const [cmd, ...args] = cmdstr.split(' ');
+  return execa.stdout(cmd, args);
+};
+
+const handleError = res => err => res.json(err.message);
+
 app.use(bodyParser.json());
 
 app.get('/api/nginx/conf', (req, res) =>
-  execa('cat', '/etc/nginx/sites-available/default'.split(' '))
-    .then(({ stdout }) => res.send(stdout))
-    .catch(err => res.json(err.message)),
+  execacmd('cat /etc/nginx/sites-available/default')
+    .then(output => res.send(output))
+    .catch(handleError(res)),
 );
 app.post('/api/nginx/conf', ({ params: body }, res) => {
   fs.writeFileSync(`/tmp/default`, body.data);
-  execa('cp', '/tmp/default /etc/nginx/sites-available/default'.split(' '))
-    .then(({ stdout }) => res.json({ stdout }))
-    .catch(err => res.json(err.message));
+  execacmd('cp /tmp/default /etc/nginx/sites-available/default')
+    .then(output => res.send(output))
+    .catch(handleError);
 });
 
 app.get('/api/nginx/reload', (req, res) =>
-  execa('nginx', '-s reload'.split(' '))
-    .then(({ stdout }) => res.json({ stdout }))
-    .catch(err => res.json(err.message)),
+  execacmd('nginx -s reload')
+    .then(output => res.send(output))
+    .catch(handleError(res)),
 );
 app.get('/api/nginx/stop', (req, res) => {
-  execa('nginx', '-s stop'.split(' '))
-    .then(({ stdout }) => res.json({ stdout }))
-    .catch(err => res.json(err.message));
+  execacmd('nginx -s stop')
+    .then(output => res.send(output))
+    .catch(handleError);
 });
 app.get('/api/nginx/start', (req, res) =>
-  execa('nginx')
-    .then(({ stdout }) => res.json({ stdout }))
-    .catch(err => res.json(err.message)),
+  execacmd('nginx')
+    .then(output => res.send(output))
+    .catch(handleError(res)),
 );
 app.get('/api/kubectl/get/:object', ({ params: { object } }, res) => {
-  execa('kubectl', `get ${object} -o json`.split(' '))
-    .then(({ stdout }) => res.send(stdout))
-    .catch(err => res.json(err.message));
+  execacmd('kubectl', `get ${object} -o json`)
+    .then(output => res.json(output))
+    .catch(handleError);
 });
 app.post('/api/kubectl/convert', (req, res) => {
   const { body } = req;
   fs.writeFileSync(`/tmp/docker-compose.${body.name}.yml`, body.data);
-  execa('kompose', `convert -f /tmp/docker-compose.${body.name}.yml`.split(' '))
-    .then(({ stdout }) => res.send(stdout))
-    .catch(err => res.json(err.message));
+  execacmd(`kompose convert -f /tmp/docker-compose.${body.name}.yml`)
+    .then(() =>
+      execa(
+        'cat',
+        `./${body.name}-service.yaml ./${body.name}-deployment.yaml`.split(' '),
+      ),
+    )
+    .then(output => res.send(output))
+    .catch(handleError);
 });
 app.post('/api/kubectl/create', (req, res) => {
   const { body } = req;
   fs.writeFileSync(`/tmp/${body.name}.deployservice.yml`, body.data);
-  execa('kubectl', `create -f /tmp/${body.name}.deployservice.yml`.split(' '))
-    .then(({ stdout }) => res.send(stdout))
-    .catch(err => res.json(err.message));
+  execacmd(`kubectl create -f /tmp/${body.name}.deployservice.yml`)
+    .then(output => res.send(output))
+    .catch(handleError);
 });
+
 app.listen(9876, () => console.log('Example app listening on port 3000!'));
