@@ -8,7 +8,7 @@ app.use(bodyParser.json());
 
 app.get('/api/nginx/conf', (req, res) =>
   execa('cat', '/etc/nginx/sites-available/default'.split(' '))
-    .then(({ stdout }) => res.json({ stdout }))
+    .then(({ stdout }) => res.send(stdout))
     .catch(err => res.json(err.message)),
 );
 app.post('/api/nginx/conf', ({ params: body }, res) => {
@@ -35,21 +35,21 @@ app.get('/api/nginx/start', (req, res) =>
 );
 app.get('/api/kubectl/get/:object', ({ params: { object } }, res) => {
   execa('kubectl', `get ${object}`.split(' '))
-    .then(({ stdout }) => res.json({ stdout }))
+    .then(({ stdout }) => res.send(stdout))
     .catch(err => res.json(err.message));
 });
 app.post('/api/kubectl/convert', (req, res) => {
   const { body } = req;
   fs.writeFileSync(`/tmp/docker-compose.${body.name}.yml`, body.data);
   execa('kompose', `convert -f /tmp/docker-compose.${body.name}.yml`.split(' '))
-    .then(({ stdout }) => res.json({ stdout }))
+    .then(({ stdout }) => res.send(stdout))
     .catch(err => res.json(err.message));
 });
 app.post('/api/kubectl/create', (req, res) => {
   const { body } = req;
   fs.writeFileSync(`/tmp/${body.name}.deployservice.yml`, body.data);
-  execa('kompose', `convert -f /tmp/docker-compose.${body.name}.yml`.split(' '))
-    .then(({ stdout }) => res.json({ stdout }))
+  execa('kubectl', `create -f /tmp/${body.name}.deployservice.yml`.split(' '))
+    .then(({ stdout }) => res.send(stdout))
     .catch(err => res.json(err.message));
 });
 app.listen(9876, () => console.log('Example app listening on port 3000!'));
