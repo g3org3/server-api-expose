@@ -4,12 +4,12 @@ const app = express();
 
 app.get('/api/nginx/conf', (req, res) => res.send('Hello World!'));
 app.get('/api/nginx/reload', (req, res) =>
-  execa('nginx -s reload')
+  execa('nginx', '-s reload'.split(' '))
     .then(({ stdout }) => res.json({ stdout }))
     .catch(err => res.json(err.message)),
 );
 app.get('/api/nginx/stop', (req, res) => {
-  execa('nginx -s stop')
+  execa('nginx', '-s stop'.split(' '))
     .then(({ stdout }) => res.json({ stdout }))
     .catch(err => res.json(err.message));
 });
