@@ -34,7 +34,7 @@ app.get('/api/nginx/start', (req, res) =>
     .catch(err => res.json(err.message)),
 );
 app.get('/api/kubectl/get/:object', ({ params: { object } }, res) => {
-  execa('kubectl', `get ${object}`.split(' '))
+  execa('kubectl', `get ${object} -o json`.split(' '))
     .then(({ stdout }) => res.send(stdout))
     .catch(err => res.json(err.message));
 });
